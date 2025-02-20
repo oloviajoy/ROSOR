@@ -1,0 +1,39 @@
+
+# Step 1: Define the source and destination directories
+source_dir = r"F:\PARGE processing\oct_2_flt_2_PARGE_processing\VNIR\oct_2_flt_2_VNIR_PARGE_outputs" # Change this to your folder containing text files
+destination_dir = r"\\TRUENAS\nextcloud_2024\Aurora 2025\Deliverables\Hyperspectral Data\VNIR\oct_2_flt_2"  # Change this to your target folder
+
+# Step 2: Check if the destination directory exists, if not, create it
+if not os.path.exists(destination_dir):
+    os.makedirs(destination_dir)
+
+# Step 3: Search for files that contain "VNIR_1800_SN0933_raw_rad_bsq_float32_atm_polish_geo" or "Classic_S640_SN7502_raw_rad_bsq_float32_atm_polish_geo"
+pattern = os.path.join(source_dir, '*VNIR_1800_SN0933_raw_rad_bsq_float32_atm_polish_geo*')
+files_to_copy = glob.glob(pattern)
+
+# Define the list of unwanted suffixes
+exclude_suffixes = ("_geo_g_sca", "_geo_igm", "_geo_map", "_geo_sca")
+
+# Step 4: COPY the matching files to the new folder, excluding unwanted suffixes
+for file in files_to_copy:
+    file_name = os.path.basename(file)
+
+    # # Skip if the file already exists in the destination
+    # if os.path.exists(destination_path):
+    #     #print(f"Skipping {file_name} (already exists in destination)")
+    #     continue
+        
+    # Check if the filename contains any of the unwanted suffixes before the extension
+    if any(file_name.rsplit(".", 1)[0].endswith(suffix) for suffix in exclude_suffixes):
+        #print(f"Skipping {file_name}")
+        continue  # Skip copying this file
+
+    # Define the destination path for the file
+    destination_path = os.path.join(destination_dir, file_name)
+    
+    # Copy the file
+    shutil.copy(file, destination_path)
+    print(f"Copied {file_name} to {destination_dir}")
+
+# Done!
+print("File copying process complete.")

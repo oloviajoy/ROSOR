@@ -1,0 +1,39 @@
+import os
+import shutil
+import pandas as pd
+
+# Specify the folder locations
+input_folder = r"F:\oct_2_flt_1\7) NAV BOX\20241002-104418\cam0"
+output_folder = r"C:\Users\olivi\Desktop\PhaseOne IXM-100 photos\Aurora_W"
+
+# New: Path to the CSV file containing file names
+csv_file_path = r"C:\Users\olivi\Desktop\PhaseOne IXM-100 photos\.csv files\1002_photos_in_FL.csv"
+# Ensure the output folder exists
+os.makedirs(output_folder, exist_ok=True)
+
+# Get a list of files in the input folder
+files_in_folder = sorted(os.listdir(input_folder))
+
+# New: Read the list of file names from the CSV file
+df_csv = pd.read_csv(csv_file_path, skiprows=6)
+file_names_from_csv = df_csv['Filename'].tolist()
+
+# New: Create a list of files that are present in both the folder and the CSV file
+matching_files = [file for file in file_names_from_csv if file in files_in_folder]
+
+# New: Create a DataFrame with the matching files
+df_matching_files = pd.DataFrame({
+    'Index': range(1, len(matching_files) + 1),
+    'File Name': matching_files
+})
+
+# New: Export the DataFrame of matching files to a .csv file
+matching_csv_output_path = os.path.join(output_folder, 'matching_file_list.csv')
+df_matching_files.to_csv(matching_csv_output_path, index=False)
+print(f"The DataFrame of matching files has been exported to {matching_csv_output_path}.")
+
+# Copy matching files to the output folder
+for file_name in matching_files:
+    shutil.copy(os.path.join(input_folder, file_name), os.path.join(output_folder, file_name))
+
+print(f"Matching files have been copied to {output_folder}.")

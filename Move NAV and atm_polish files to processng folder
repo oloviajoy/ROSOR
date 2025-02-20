@@ -1,0 +1,64 @@
+## STEP 1: copy all atm_polish .bsq and .hdr files to the processing folder
+
+import os
+import shutil
+import glob
+
+# Step 1: Define the source and destination directories
+source_dir = r"F:\oct_3_flt_1_ATCOR outputs" # Change this to your folder containing text files
+destination_dir = r"F:\PARGE processing\oct_3_flt_1_PARGE_processing\SWIR" # Change this to your target folder
+
+
+# Step 2: Check if the destination directory exists, if not, create it
+if not os.path.exists(destination_dir):
+    os.makedirs(destination_dir)
+
+# Step 3: Search for files that contain "VNIR_1800_SN0933_raw_rad_bsq_float32_atm_polish" or "Classic_S640_SN7502_raw_rad_bsq_float32_atm_polish" in their names
+pattern = os.path.join(source_dir, '*Classic_S640_SN7502_raw_rad_bsq_float32_atm_polish*')  
+files_to_copy = glob.glob(pattern)
+
+# Step 4: COPY the matching files to the new folder
+for file in files_to_copy:
+    # Get the file name
+    file_name = os.path.basename(file)
+    # Define the destination path for the file
+    destination_path = os.path.join(destination_dir, file_name)
+    
+    # Copy the file
+    shutil.copy(file, destination_path)
+    #print(f"Copied {file_name} to {destination_dir}")
+
+# Done!
+print("File copying process complete.")
+
+## STEP 2: move all of the NAV files over:
+import os
+import shutil
+import glob
+
+# Step 1: Define the source and destination directories
+source_dir = r"C:\Users\ROSOR_thread\Desktop\NAV_outputs\oct_2_flt_1" # Change this to your folder containing text files
+destination_dir = r"E:\PARGE processing\oct_2_flt_1_PARGE_processing\VNIR" # Change this to your target folder
+
+
+# Step 2: Check if the destination directory exists, if not, create it
+if not os.path.exists(destination_dir):
+    os.makedirs(destination_dir)
+
+# Step 3: Search for files that contain "VNIR_1800_SN0933_raw_rad_bsq_float32_atm_polish" or "Classic_S640_SN7502_raw_rad_bsq_float32_atm_polish" in their names
+pattern = os.path.join(source_dir, '*VNIR*')  
+files_to_copy = glob.glob(pattern)
+
+# Step 4: COPY the matching files to the new folder
+for file in files_to_copy:
+    # Get the file name
+    file_name = os.path.basename(file)
+    # Define the destination path for the file
+    destination_path = os.path.join(destination_dir, file_name)
+    
+    # Copy the file
+    shutil.copy(file, destination_path)
+    print(f"Copied {file_name} to {destination_dir}")
+
+# Done!
+print("File copying process complete.")

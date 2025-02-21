@@ -59,35 +59,48 @@ pd.DataFrame(missing_in_1).to_csv("missing_in_file1.csv", index=False, header=Fa
 
 ##STEP 3: COPY MISSING FILES TO NEW FOLDER 
 
+import os
+import shutil
 import pandas as pd
-from IPython.display import display  # Ensures tables are displayed properly in Jupyter
 
 # Define file paths
-csv_file_1 = r"D:\Ground pointcloud tiles\file_name_list.csv"
-csv_file_2 = r"D:\Ground pointcloud tiles\file_name_list (3).csv"
+folder_path = r"D:\Ground pointcloud tiles"
+csv_path = r"missing_files_comparison.csv"
+destination_folder = r"D:\Ground pointcloud tiles\missing files"
 
-# Read CSV files without headers (assuming filenames are in the first column)
-df1 = pd.read_csv(csv_file_1, header=None)
-df2 = pd.read_csv(csv_file_2, header=None)
+# Create the destination folder if it doesn't exist
+os.makedirs(destination_folder, exist_ok=True)
 
-# Convert to sets for comparison
-files1 = set(df1.iloc[:, 0])  # First column of file1.csv
-files2 = set(df2.iloc[:, 0])  # First column of file2.csv
+# Read the CSV file
+df = pd.read_csv(csv_path)
 
-# Find missing files
-missing_in_2 = list(files1 - files2)  # Files in file1.csv but not in file2.csv
-missing_in_1 = list(files2 - files1)  # Files in file2.csv but not in file1.csv
+# Check CSV structure
+print("CSV Columns:", df.columns)
+print(df.head())  # Print first few rows to check structure
 
-# Create DataFrame for display
-df_missing = pd.DataFrame({
-    "Missing in File 2": missing_in_2 + [None] * (max(len(missing_in_1), len(missing_in_2)) - len(missing_in_2)),
-    "Missing in File 1": missing_in_1 + [None] * (max(len(missing_in_1), len(missing_in_2)) - len(missing_in_1))
-})
+# Ensure the column name is correct
+df.columns = df.columns.str.strip()
+file_column = "Missing in File 2"  # Change this if your column has a different name
+file_list = set(df[file_column].str.strip())  # Remove spaces and convert to set
 
-# Display table in Jupyter Notebook
-display(df_missing)
+# Debugging: Print loaded filenames
+print("Loaded filenames from CSV:", file_list)
 
-# Optionally, save results to CSV
-df_missing.to_csv("missing_files_comparison.csv", index=False)
+# Loop through files in the folder and check for matches
+matched_files = []
+for filename in os.listdir(folder_path):
+    if filename.endswith(".laz"):  # Ensure it's a .laz file
+        if filename in file_list:  # Check if it's in the CSV
+            matched_files.append(filename)
+            src_path = os.path.join(folder_path, filename)
+            dest_path = os.path.join(destination_folder, filename)
+            shutil.copy2(src_path, dest_path)  # Copy file while preserving metadata
+            print(f"Copied: {filename}")
 
-pd.DataFrame(missing_in_1).to_csv("missing_in_file1.csv", index=False, header=False)
+# Debugging: Print matched files
+if matched_files:
+    print("Matched files:", matched_files)
+else:
+    print("No matching files found.")
+
+print("Script execution complete.")

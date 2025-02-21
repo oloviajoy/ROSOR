@@ -1,0 +1,93 @@
+##STEP 1: CREATE LIST OF FILE NAMES (.CSV) FROM FOLDER for source folder and upload folder
+
+import os
+
+# Define the target directory
+target_dir = r"D:\Ground pointcloud tiles"# Change this to your folder
+
+# Define the output file path
+output_file = os.path.join(target_dir, "file_name_list.csv")  # Change to .csv if needed
+
+# Get all files in the directory
+file_list = sorted(os.listdir(target_dir))  # Sort alphabetically for better readability
+
+# Write the file names to a text file
+with open(output_file, "w") as f:
+    for file_name in file_list:
+        f.write(file_name + "\n")
+
+print(f"File list exported to {output_file}")
+
+
+
+##STEP 2: compare file names between the source folder and the upload folder to see what is missing
+
+import pandas as pd
+from IPython.display import display  # Ensures tables are displayed properly in Jupyter
+
+# Define file paths
+csv_file_1 = r"D:\Ground pointcloud tiles\file_name_list.csv"
+csv_file_2 = r"D:\Ground pointcloud tiles\file_name_list (3).csv"
+
+# Read CSV files without headers (assuming filenames are in the first column)
+df1 = pd.read_csv(csv_file_1, header=None)
+df2 = pd.read_csv(csv_file_2, header=None)
+
+# Convert to sets for comparison
+files1 = set(df1.iloc[:, 0])  # First column of file1.csv
+files2 = set(df2.iloc[:, 0])  # First column of file2.csv
+
+# Find missing files
+missing_in_2 = list(files1 - files2)  # Files in file1.csv but not in file2.csv
+missing_in_1 = list(files2 - files1)  # Files in file2.csv but not in file1.csv
+
+# Create DataFrame for display
+df_missing = pd.DataFrame({
+    "Missing in File 2": missing_in_2 + [None] * (max(len(missing_in_1), len(missing_in_2)) - len(missing_in_2)),
+    "Missing in File 1": missing_in_1 + [None] * (max(len(missing_in_1), len(missing_in_2)) - len(missing_in_1))
+})
+
+# Display table in Jupyter Notebook
+display(df_missing)
+
+# Optionally, save results to CSV
+df_missing.to_csv("missing_files_comparison.csv", index=False)
+
+pd.DataFrame(missing_in_1).to_csv("missing_in_file1.csv", index=False, header=False)
+
+
+
+##STEP 3: COPY MISSING FILES TO NEW FOLDER 
+
+import pandas as pd
+from IPython.display import display  # Ensures tables are displayed properly in Jupyter
+
+# Define file paths
+csv_file_1 = r"D:\Ground pointcloud tiles\file_name_list.csv"
+csv_file_2 = r"D:\Ground pointcloud tiles\file_name_list (3).csv"
+
+# Read CSV files without headers (assuming filenames are in the first column)
+df1 = pd.read_csv(csv_file_1, header=None)
+df2 = pd.read_csv(csv_file_2, header=None)
+
+# Convert to sets for comparison
+files1 = set(df1.iloc[:, 0])  # First column of file1.csv
+files2 = set(df2.iloc[:, 0])  # First column of file2.csv
+
+# Find missing files
+missing_in_2 = list(files1 - files2)  # Files in file1.csv but not in file2.csv
+missing_in_1 = list(files2 - files1)  # Files in file2.csv but not in file1.csv
+
+# Create DataFrame for display
+df_missing = pd.DataFrame({
+    "Missing in File 2": missing_in_2 + [None] * (max(len(missing_in_1), len(missing_in_2)) - len(missing_in_2)),
+    "Missing in File 1": missing_in_1 + [None] * (max(len(missing_in_1), len(missing_in_2)) - len(missing_in_1))
+})
+
+# Display table in Jupyter Notebook
+display(df_missing)
+
+# Optionally, save results to CSV
+df_missing.to_csv("missing_files_comparison.csv", index=False)
+
+pd.DataFrame(missing_in_1).to_csv("missing_in_file1.csv", index=False, header=False)

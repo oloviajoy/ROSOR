@@ -1,0 +1,194 @@
+##STEP 1: Copy .hdr files from PARGE output folder to a new folder
+
+import os
+import shutil
+import glob
+
+# Define source and destination folders
+source_folder = r"E:\PARGE processing\sept_12_flt_2\SWIR\sept_12_flt_2_SWIR_PARGE_outputs"# Change to your source folder path
+destination_folder = r"C:\Users\ROSOR_thread\Desktop\Aurora HySpex shape files\sept_12_flt_2\.hdr"# Change to your destination folder path
+
+# Ensure the destination folder exists
+os.makedirs(destination_folder, exist_ok=True)
+
+# Define substrings to exclude
+exclude_substrings = ("_geo_g_sca", "_geo_igm", "_geo_map", "_geo_sca")
+
+# Find all .hdr files in the source folder
+hdr_files = glob.glob(os.path.join(source_folder, "*.hdr"))
+
+# Filter out files containing any of the exclude substrings
+filtered_files = [file for file in hdr_files if not any(sub in os.path.basename(file) for sub in exclude_substrings)]
+
+# Copy each filtered .hdr file to the destination folder
+for file in filtered_files:
+    shutil.copy2(file, destination_folder)
+
+print(f"Copied {len(filtered_files)} .hdr files to {destination_folder}")
+
+
+
+
+
+
+##STEP 2: Extract location metadata from .hdr files and export as .csv files
+
+import os
+import glob
+import pandas as pd
+
+def parse_hdr_file(hdr_path):
+    """Extract metadata from an ENVI .hdr file with better handling of spaces and case sensitivity."""
+    metadata = {}
+
+    with open(hdr_path, "r", encoding="utf-8") as file:
+        for line in file:
+            parts = line.strip().split("=", 1)  # Split at first '=' only
+            if len(parts) == 2:
+                key = parts[0].strip().lower()  # Normalize keys to lowercase
+                value = parts[1].strip()
+                metadata[key] = value
+
+    return metadata
+
+def extract_location_metadata(hdr_folder, output_folder):
+    """Extracts location metadata from .hdr files and saves each file separately in CSV format."""
+    hdr_files = glob.glob(os.path.join(hdr_folder, "*.hdr"))
+
+    if not hdr_files:
+        print("No .hdr files found in the folder.")
+        return
+
+    os.makedirs(output_folder, exist_ok=True)
+
+    for hdr_file in hdr_files:
+        metadata = parse_hdr_file(hdr_file)
+
+        # Debugging: Print all keys to check for variations in "map info"
+        print(f"\nParsed keys from {os.path.basename(hdr_file)}:")
+        print(list(metadata.keys()))
+
+        # Try different key variations
+        possible_keys = ["map info", " map info ", "map_info"]
+        map_info_key = next((key for key in possible_keys if key in metadata), None)
+
+        if not map_info_key:
+            print(f"❌ Skipping {hdr_file} due to missing 'map info' field.")
+            continue
+
+        try:
+            # Extract values
+            width = int(metadata.get("samples", 0))
+            height = int(metadata.get("lines", 0))
+
+            # Extract UTM coordinates from "map info"
+            map_info_values = metadata[map_info_key].split("{")[1].split("}")[0].split(",")
+            x_min, y_max = float(map_info_values[3]), float(map_info_values[4])
+
+            # Extract pixel size
+            pixel_size = float(metadata["pixel size"].split("{")[1].split(",")[0].strip())
+
+            # Prepare extracted metadata
+            metadata_dict = {
+                "File Name": [os.path.basename(hdr_file)],
+                "X Min": [x_min],
+                "Y Max": [y_max],
+                "Pixel Size (m)": [pixel_size],
+                "Width (Samples)": [width],
+                "Height (Lines)": [height]
+            }
+
+            # Convert to DataFrame
+            df = pd.DataFrame(metadata_dict)
+
+            # Save as CSV, naming it after the input file
+            file_name = os.path.splitext(os.path.basename(hdr_file))[0] + "_metadata.csv"
+            output_path = os.path.join(output_folder, file_name)
+            df.to_csv(output_path, index=False)
+
+            print(f"✅ Saved: {output_path}")
+
+        except (KeyError, ValueError, IndexError) as e:
+            print(f"⚠️ Skipping {hdr_file} due to parsing error: {e}")
+            continue
+
+# Set folder paths
+hdr_folder = r"C:\Users\ROSOR_thread\Desktop\Aurora HySpex shape files\sept_12_flt_2\.hdr"# Change this to your folder with .hdr files
+output_folder = r"C:\Users\ROSOR_thread\Desktop\Aurora HySpex shape files\sept_12_flt_2\.csv"# Change this to your desired output folder
+
+# Run the function
+extract_location_metadata(hdr_folder, output_folder)
+
+
+
+
+
+
+
+
+
+##STEP 3: use metadata in .csv to create .shp file polygon and save to new folder
+
+import os
+import glob
+import geopandas as gpd
+import pandas as pd
+from shapely.geometry import Polygon
+
+def create_shapefiles_from_csv(csv_folder, output_folder, epsg_code=2962):
+    """Reads CSV files with raster metadata, creates shapefiles, and saves them to an output folder."""
+
+    os.makedirs(output_folder, exist_ok=True)  # Ensure output folder exists
+
+    csv_files = glob.glob(os.path.join(csv_folder, "*.csv"))  # Get all CSV files
+
+    if not csv_files:
+        print("No CSV files found in the folder.")
+        return
+
+    for csv_file in csv_files:
+        try:
+            df = pd.read_csv(csv_file)  # Read CSV file
+            
+            # Ensure required columns exist
+            required_columns = {"File Name", "X Min", "Y Max", "Pixel Size (m)", "Width (Samples)", "Height (Lines)"}
+            if not required_columns.issubset(df.columns):
+                print(f"❌ Skipping {csv_file} due to missing required columns.")
+                continue
+
+            # Extract metadata
+            for _, row in df.iterrows():
+                x_min = float(row["X Min"])
+                y_max = float(row["Y Max"])
+                pixel_size = float(row["Pixel Size (m)"])
+                width = int(row["Width (Samples)"])
+                height = int(row["Height (Lines)"])
+
+                # Calculate bounding box
+                x_max = x_min + (width * pixel_size)
+                y_min = y_max - (height * pixel_size)
+
+                # Create polygon (extent of the raster)
+                polygon = Polygon([(x_min, y_min), (x_max, y_min), (x_max, y_max), (x_min, y_max)])
+
+                # Create GeoDataFrame
+                gdf = gpd.GeoDataFrame([{"geometry": polygon}], crs=f"EPSG:{epsg_code}")
+
+                # Generate output shapefile name based on CSV name
+                shp_filename = os.path.splitext(os.path.basename(row["File Name"]))[0] + ".shp"
+                output_path = os.path.join(output_folder, shp_filename)
+
+                # Save as shapefile
+                gdf.to_file(output_path)
+                print(f"✅ Saved: {output_path}")
+
+        except Exception as e:
+            print(f"⚠️ Error processing {csv_file}: {e}")
+
+# Set folder paths
+csv_folder = r"C:\Users\ROSOR_thread\Desktop\Aurora HySpex shape files\sept_12_flt_2\.csv"# Change this to your CSV folder path
+output_folder = r"C:\Users\ROSOR_thread\Desktop\Aurora HySpex shape files\sept_12_flt_2\.shp"# Change this to where you want to save the shapefiles
+
+# Run the function
+create_shapefiles_from_csv(csv_folder, output_folder)
+
